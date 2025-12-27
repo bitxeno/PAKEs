@@ -198,7 +198,7 @@ impl<'a, D: Digest> SrpClient<'a, D> {
 
         let u = compute_u::<D>(&a_pub.to_bytes_be(), &b_pub.to_bytes_be());
         let k = compute_k::<D>(self.params);
-        let identity_hash = Self::compute_identity_hash(&[], password);
+        let identity_hash = Self::compute_identity_hash(username, password);
         let x = Self::compute_x(identity_hash.as_slice(), salt);
 
         let key = self.compute_premaster_secret(&b_pub, &k, &x, &a, &u);
