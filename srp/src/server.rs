@@ -127,6 +127,8 @@ impl<'a, D: Digest> SrpServer<'a, D> {
         b: &[u8],
         v: &[u8],
         a_pub: &[u8],
+        username: &[u8],
+        salt: &[u8],
     ) -> Result<SrpServerVerifier<D>, SrpAuthError> {
         let b = BigUint::from_bytes_be(b);
         let v = BigUint::from_bytes_be(v);
@@ -148,6 +150,9 @@ impl<'a, D: Digest> SrpServer<'a, D> {
             &a_pub.to_bytes_be(),
             &b_pub.to_bytes_be(),
             &key.to_bytes_be(),
+            username,
+            salt,
+            self.params,
         );
 
         let m2 = compute_m2::<D>(&a_pub.to_bytes_be(), &m1, &key.to_bytes_be());
