@@ -202,23 +202,27 @@ impl<'a, D: Digest> SrpClient<'a, D> {
         let x = Self::compute_x(identity_hash.as_slice(), salt);
 
         let key = self.compute_premaster_secret(&b_pub, &k, &x, &a, &u);
-        let key = D::digest(key.to_bytes_be());
+        let key_bytes = key.to_bytes_be();
+        let key_hash = D::digest(&key_bytes);
 
+        /* hash: X || Y || s || A || B || K */
         let m1 = compute_m1::<D>(
             &a_pub.to_bytes_be(),
             &b_pub.to_bytes_be(),
-            &key,
+            &key_bytes,
             username,
             salt,
             self.params,
+            None,
         );
 
-        let m2 = compute_m2::<D>(&a_pub.to_bytes_be(), &m1, &key);
+        /* ckhash: A | M | K */
+        let m2 = compute_m2::<D>(&a_pub.to_bytes_be(), &m1, key_hash.as_slice());
 
         Ok(SrpClientVerifier {
             m1,
             m2,
-            key: key.to_vec(),
+            key: key_hash.to_vec(),
         })
     }
 }

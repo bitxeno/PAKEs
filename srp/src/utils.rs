@@ -34,29 +34,37 @@ pub fn compute_m1<D: Digest>(
     username: &[u8],
     salt: &[u8],
     params: &SrpGroup,
+    ex_data: Option<&[u8]>,
 ) -> Output<D> {
-    let n = params.n.to_bytes_be();
+    // X = H(N) xor H(g) where H(...) = SHA512(raw bytes)
+    let n_bytes = params.n.to_bytes_be();
     let g_bytes = params.g.to_bytes_be();
-    //pad g and n to the same length
-    let mut g = vec![0; n.len() - g_bytes.len()];
-    g.extend_from_slice(&g_bytes);
 
-    // Compute the hash of n and g
-    let mut g_hash = D::digest(&g);
-    let n_hash = D::digest(&n);
+    let n_hash = D::digest(&n_bytes);
+    let g_hash = D::digest(&g_bytes);
 
-    // XOR the hashes
-    for i in 0..g_hash.len() {
-        g_hash[i] ^= n_hash[i];
+    let mut x = n_hash.clone();
+    for i in 0..x.len() {
+        x[i] ^= g_hash[i];
     }
 
+    // Y = H(U)
+    let y = D::digest(username);
+
+    // K = H(BigIntegerToCstr(srp->key)) -> hash the provided key bytes
+    let key_hash = D::digest(key);
+
     let mut d = D::new();
-    d.update(&g_hash);
-    d.update(D::digest(username));
+    d.update(&x); // 64 bytes
+    d.update(&y); // 64 bytes
     d.update(salt);
     d.update(a_pub);
     d.update(b_pub);
-    d.update(key);
+    d.update(&key_hash); // 64 bytes
+    if let Some(ed) = ex_data {
+        d.update(ed);
+    }
+
     d.finalize()
 }
 

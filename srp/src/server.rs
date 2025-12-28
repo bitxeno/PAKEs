@@ -144,23 +144,28 @@ impl<'a, D: Digest> SrpServer<'a, D> {
 
         let u = compute_u::<D>(&a_pub.to_bytes_be(), &b_pub.to_bytes_be());
 
-        let key = self.compute_premaster_secret(&a_pub, &v, &u, &b);
+        let premaster = self.compute_premaster_secret(&a_pub, &v, &u, &b);
+        let premaster_bytes = premaster.to_bytes_be();
+
+        // K = SHA512(BigIntegerToCstr(srp->key))
+        let key_hash = D::digest(&premaster_bytes);
 
         let m1 = compute_m1::<D>(
             &a_pub.to_bytes_be(),
             &b_pub.to_bytes_be(),
-            &key.to_bytes_be(),
+            &premaster_bytes,
             username,
             salt,
             self.params,
+            None,
         );
 
-        let m2 = compute_m2::<D>(&a_pub.to_bytes_be(), &m1, &key.to_bytes_be());
+        let m2 = compute_m2::<D>(&a_pub.to_bytes_be(), &m1, key_hash.as_slice());
 
         Ok(SrpServerVerifier {
             m1,
             m2,
-            key: key.to_bytes_be(),
+            key: key_hash.to_vec(),
         })
     }
 }
